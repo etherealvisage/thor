@@ -47,7 +47,7 @@ int main() {
     int frameCount = 0;
     int start = SDL_GetTicks();
 
-    bool move[6] = {false,false,false,false,false,false}, rot[2] = {false,false};
+    bool move[6] = {false,false,false,false,false,false}, rot[4] = {false,false,false,false};
 
     while(1) {
         SDL_Event e;
@@ -63,18 +63,22 @@ int main() {
                 else if(e.key.keysym.sym == SDLK_w) move[5] = value;
                 else if(e.key.keysym.sym == SDLK_LEFT) rot[0] = value;
                 else if(e.key.keysym.sym == SDLK_RIGHT) rot[1] = value;
+                else if(e.key.keysym.sym == SDLK_UP) rot[2] = value;
+                else if(e.key.keysym.sym == SDLK_DOWN) rot[3] = value;
             }
         }
 
-        if(move[0]) scene.camera().pos() -= Math::Vector(0.02,0,0);
-        if(move[1]) scene.camera().pos() += Math::Vector(0.02,0,0);
-        if(move[2]) scene.camera().pos() -= Math::Vector(0,0.02,0);
-        if(move[3]) scene.camera().pos() += Math::Vector(0,0.02,0);
-        if(move[4]) scene.camera().pos() -= Math::Vector(0,0,0.02);
-        if(move[5]) scene.camera().pos() += Math::Vector(0,0,0.02);
+        if(move[0]) scene.camera().pos() -= scene.camera().rot() * Math::Vector(0.02,0,0);
+        if(move[1]) scene.camera().pos() += scene.camera().rot() * Math::Vector(0.02,0,0);
+        if(move[2]) scene.camera().pos() -= scene.camera().rot() * Math::Vector(0,0.02,0);
+        if(move[3]) scene.camera().pos() += scene.camera().rot() * Math::Vector(0,0.02,0);
+        if(move[4]) scene.camera().pos() -= scene.camera().rot() * Math::Vector(0,0,0.02);
+        if(move[5]) scene.camera().pos() += scene.camera().rot() * Math::Vector(0,0,0.02);
 
-        if(rot[0]) scene.camera().rot() = scene.camera().rot() * Math::Quaternion(Math::Vector(0,1,0), 0.05);
-        if(rot[1]) scene.camera().rot() = scene.camera().rot() * Math::Quaternion(Math::Vector(0,1,0), -0.05);
+        if(rot[0]) scene.camera().rot() = scene.camera().rot() * Math::Quaternion(Math::Vector(0,1,0), -0.05);
+        if(rot[1]) scene.camera().rot() = scene.camera().rot() * Math::Quaternion(Math::Vector(0,1,0), 0.05);
+        if(rot[2]) scene.camera().rot() = scene.camera().rot() * Math::Quaternion(Math::Vector(1,0,0), 0.05);
+        if(rot[3]) scene.camera().rot() = scene.camera().rot() * Math::Quaternion(Math::Vector(1,0,0), -0.05);
 
         /*std::cout << "Rot: " << scene.camera().rot().s() << std::endl;
         std::cout << "\t" << scene.camera().rot().v().toString() << std::endl;*/
