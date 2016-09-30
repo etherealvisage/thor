@@ -29,7 +29,7 @@ public:
 
     const OutputConfig &outputConfig() { return m_outputConfig; }
 
-    void render(Scene &scene);
+    void render(Scene &scene, void *pxdata);
 };
 
 }  // namespace Tracer

@@ -14,6 +14,9 @@ public:
     Sphere(const Math::Vector &origin, double radius)
         : m_origin(origin), m_radius(radius) {}
 
+    const Math::Vector &origin() const { return m_origin; }
+    double radius() const { return m_radius; }
+
     virtual void boundingBox(Math::Vector &a, Math::Vector &b) const {
         a = m_origin - Math::Vector(m_radius, m_radius, m_radius);
         b = m_origin + Math::Vector(m_radius, m_radius, m_radius);

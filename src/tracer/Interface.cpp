@@ -4,6 +4,7 @@
 #include <CL/cl.hpp>
 
 #include "Interface.h"
+#include "Sphere.h"
 
 #include "resource/File.h"
 #include "resource/Registry.h"
@@ -98,7 +99,7 @@ Interface::~Interface() {
     
 }
 
-void Interface::render(Scene &scene) {
+void Interface::render(Scene &scene, void *pxdata) {
     cl_int err;
     cl::Image2D &out = scene.cache().outputBuffer();
     cl::Event pixelCopy, cameraCopy, sphereCopy;
@@ -144,10 +145,10 @@ void Interface::render(Scene &scene) {
             (float)scene.camera().pos().z(),
             (float)60.0,
 
+            (float)scene.camera().rot().s(),
             (float)scene.camera().rot().v().x(),
             (float)scene.camera().rot().v().y(),
-            (float)scene.camera().rot().v().z(),
-            (float)scene.camera().rot().s()
+            (float)scene.camera().rot().v().z()
         };
 
         m_queue.enqueueWriteBuffer(camera, false, 0, sizeof(camera_data),
@@ -155,12 +156,13 @@ void Interface::render(Scene &scene) {
     }
 
     cl::Buffer &spheres = scene.cache().sphereBuffer();
+    #if 0
     if(spheres() == nullptr) {
         spheres = cl::Buffer(m_context,
             CL_MEM_READ_ONLY | CL_MEM_HOST_WRITE_ONLY, sizeof(float) * 4);
     }
 
-    // Copy debugging sphere information in
+    // Copy sphere information
     {
         float sphere_data[4] = {
             0, 0, 10,
@@ -168,6 +170,26 @@ void Interface::render(Scene &scene) {
         };
         m_queue.enqueueWriteBuffer(spheres, false, 0, sizeof(sphere_data),
             sphere_data, nullptr, &sphereCopy);
+    }
+    #endif
+    int sphereCount = 0;
+    {
+        std::vector<float> data;
+        for(auto object : scene.sceneObjects()) {
+            auto sphere = dynamic_cast<Sphere *>(object);
+            if(!sphere) continue;
+
+            data.push_back(sphere->origin().x());
+            data.push_back(sphere->origin().y());
+            data.push_back(sphere->origin().z());
+            data.push_back(sphere->radius());
+            sphereCount ++;
+        }
+        spheres = cl::Buffer(m_context,
+            CL_MEM_READ_ONLY | CL_MEM_HOST_WRITE_ONLY,
+            sizeof(float) * data.size());
+        m_queue.enqueueWriteBuffer(spheres, false, 0,
+            sizeof(float) * data.size(), &data[0], nullptr, &sphereCopy);
     }
 
     pixelCopy.wait();
@@ -182,16 +204,25 @@ void Interface::render(Scene &scene) {
     if(err != CL_SUCCESS) Message3(Tracer, Fatal, "Failed to set argument?");
     err = m_tracerKernel.setArg(3, spheres);
     if(err != CL_SUCCESS) Message3(Tracer, Fatal, "Failed to set argument?");
-    err = m_tracerKernel.setArg(4, 1);
+    err = m_tracerKernel.setArg(4, sphereCount);
     if(err != CL_SUCCESS) Message3(Tracer, Fatal, "Failed to set argument?");
 
     cl::Event event;
-    m_queue.enqueueNDRangeKernel(m_tracerKernel, cl::NullRange, cl::NDRange(32), cl::NDRange(1, 1),
+    m_queue.enqueueNDRangeKernel(m_tracerKernel, cl::NullRange,
+        cl::NDRange(1024), cl::NDRange(32),
         NULL, &event);
 
     event.wait();
 
-    unsigned char *data = new unsigned char[800*600*4];
+    cl::size_t<3> origin, size;
+    origin[0] = 0, origin[1] = 0, origin[2] = 0;
+    size[0] = 800, size[1] = 600, size[2] = 1;
+    err = m_queue.enqueueReadImage(out, true, origin, size, 0, 0, pxdata, nullptr, &event);
+    if(err != CL_SUCCESS) Message3(Tracer, Fatal, "Failed to read image? " << err);
+
+    event.wait();
+
+    /*unsigned char *data = new unsigned char[800*600*4];
     for(int i = 0; i < 800*600*4; i ++) data[i] = 0;
 
     cl::size_t<3> origin, size;
@@ -202,15 +233,17 @@ void Interface::render(Scene &scene) {
 
     event.wait();
 
-    std::ofstream outimage("out.ppm");
+    std::memcpy(pxdata, data, 800*600*4);
+
+    delete[] data;*/
+
+    /*std::ofstream outimage("out.ppm");
     outimage << "P3" << std::endl << "800 600\n255\n";
     for(int i = 0; i < 800*600*4; i += 4) {
         outimage << ((data[i+0]) & 0xff) << " ";
         outimage << ((data[i+1]) & 0xff) << " ";
         outimage << ((data[i+2]) & 0xff) << " ";
-    }
-
-    delete[] data;
+    }*/
 }
 
 }  // namespace Tracer

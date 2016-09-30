@@ -14,7 +14,9 @@ private:
 public:
     Camera(Math::Vector pos, Math::Quaternion rot) : m_pos(pos), m_rot(rot) {}
 
+    Math::Vector &pos() { return m_pos; }
     const Math::Vector &pos() const { return m_pos; }
+    Math::Quaternion &rot() { return m_rot; }
     const Math::Quaternion &rot() const { return m_rot; }
 };
 

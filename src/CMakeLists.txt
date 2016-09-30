@@ -16,4 +16,4 @@ set(sources
 
 add_executable(thor ${sources})
 
-target_link_libraries(thor m OpenCL pugixml)
+target_link_libraries(thor m OpenCL pugixml SDL2)

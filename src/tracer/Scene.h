@@ -25,6 +25,7 @@ public:
     SceneCache &cache() { return *m_cache; }
     const SceneCache &cache() const { return *m_cache; }
 
+    Camera &camera() { return m_camera; }
     const Camera &camera() const { return m_camera; }
 
     const std::vector<SceneObject *> &sceneObjects() const
