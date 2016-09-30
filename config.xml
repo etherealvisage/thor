@@ -1,0 +1,4 @@
+<config>
+    <cl vendor="NVIDIA Corporation" device="GeForce GT 750M" />
+    <!--<cl vendor="Intel(R) Corporation" device="Intel(R) Core(TM) i7-4700MQ CPU @ 2.40GHz" />-->
+</config>
