@@ -7,6 +7,7 @@
 #include "tracer/Interface.h"
 #include "tracer/Scene.h"
 #include "tracer/Sphere.h"
+#include "tracer/Light.h"
 
 #include "resource/XML.h"
 #include "resource/Registry.h"
@@ -28,12 +29,13 @@ int main() {
 
     Tracer::Scene scene;
 
-    scene.addSceneObject(new Tracer::Sphere(Math::Vector(0,0,10), 3));
-    scene.addSceneObject(new Tracer::Sphere(Math::Vector(0,0,-10), 3));
-    scene.addSceneObject(new Tracer::Sphere(Math::Vector(10,0,0), 3));
-    scene.addSceneObject(new Tracer::Sphere(Math::Vector(-10,0,0), 3));
-    scene.addSceneObject(new Tracer::Sphere(Math::Vector(0,10,0), 3));
-    scene.addSceneObject(new Tracer::Sphere(Math::Vector(0,-10,0), 3));
+    scene.addSceneObject(new Tracer::Light(Math::Vector(0,0,0), Math::Vector(0,0,0), Math::Vector(1.0,1.0,1.0), Math::Vector(0,0,0)));
+    scene.addSceneObject(new Tracer::Sphere(Math::Vector(0,0,10), 3, Math::Vector(1.0,0.0,0.0), 0.9));
+    scene.addSceneObject(new Tracer::Sphere(Math::Vector(0,0,-10), 3, Math::Vector(0.0,1.0,0.0), 0.9));
+    scene.addSceneObject(new Tracer::Sphere(Math::Vector(10,0,0), 3, Math::Vector(1.0,1.0,1.0), 0.9));
+    scene.addSceneObject(new Tracer::Sphere(Math::Vector(-10,0,0), 3, Math::Vector(1.0,1.0,1.0), 0.9));
+    scene.addSceneObject(new Tracer::Sphere(Math::Vector(0,10,0), 3, Math::Vector(1.0,1.0,1.0), 0.9));
+    scene.addSceneObject(new Tracer::Sphere(Math::Vector(0,-10,0), 3, Math::Vector(1.0,1.0,1.0), 0.9));
 
     SDL_Init(SDL_INIT_VIDEO);
 
@@ -65,23 +67,21 @@ int main() {
                 else if(e.key.keysym.sym == SDLK_RIGHT) rot[1] = value;
                 else if(e.key.keysym.sym == SDLK_UP) rot[2] = value;
                 else if(e.key.keysym.sym == SDLK_DOWN) rot[3] = value;
+                else if(e.key.keysym.sym == SDLK_ESCAPE) break;
             }
         }
 
-        if(move[0]) scene.camera().pos() -= scene.camera().rot() * Math::Vector(0.02,0,0);
-        if(move[1]) scene.camera().pos() += scene.camera().rot() * Math::Vector(0.02,0,0);
-        if(move[2]) scene.camera().pos() -= scene.camera().rot() * Math::Vector(0,0.02,0);
-        if(move[3]) scene.camera().pos() += scene.camera().rot() * Math::Vector(0,0.02,0);
-        if(move[4]) scene.camera().pos() -= scene.camera().rot() * Math::Vector(0,0,0.02);
-        if(move[5]) scene.camera().pos() += scene.camera().rot() * Math::Vector(0,0,0.02);
+        if(move[0]) scene.camera().pos() -= scene.camera().rot() * Math::Vector(0.04,0,0);
+        if(move[1]) scene.camera().pos() += scene.camera().rot() * Math::Vector(0.04,0,0);
+        if(move[2]) scene.camera().pos() -= scene.camera().rot() * Math::Vector(0,0.04,0);
+        if(move[3]) scene.camera().pos() += scene.camera().rot() * Math::Vector(0,0.04,0);
+        if(move[4]) scene.camera().pos() -= scene.camera().rot() * Math::Vector(0,0,0.04);
+        if(move[5]) scene.camera().pos() += scene.camera().rot() * Math::Vector(0,0,0.04);
 
         if(rot[0]) scene.camera().rot() = scene.camera().rot() * Math::Quaternion(Math::Vector(0,1,0), -0.05);
         if(rot[1]) scene.camera().rot() = scene.camera().rot() * Math::Quaternion(Math::Vector(0,1,0), 0.05);
         if(rot[2]) scene.camera().rot() = scene.camera().rot() * Math::Quaternion(Math::Vector(1,0,0), 0.05);
         if(rot[3]) scene.camera().rot() = scene.camera().rot() * Math::Quaternion(Math::Vector(1,0,0), -0.05);
-
-        /*std::cout << "Rot: " << scene.camera().rot().s() << std::endl;
-        std::cout << "\t" << scene.camera().rot().v().toString() << std::endl;*/
 
         void *pixels;
         int width;

@@ -5,6 +5,7 @@
 
 #include "Interface.h"
 #include "Sphere.h"
+#include "Light.h"
 
 #include "resource/File.h"
 #include "resource/Registry.h"
@@ -102,7 +103,7 @@ Interface::~Interface() {
 void Interface::render(Scene &scene, void *pxdata) {
     cl_int err;
     cl::Image2D &out = scene.cache().outputBuffer();
-    cl::Event pixelCopy, cameraCopy, sphereCopy;
+    cl::Event pixelCopy, cameraCopy, sphereCopy, lightCopy;
 
     if(out() == nullptr) {
         cl::ImageFormat format;
@@ -156,6 +157,7 @@ void Interface::render(Scene &scene, void *pxdata) {
     }
 
     cl::Buffer &spheres = scene.cache().sphereBuffer();
+    cl::Buffer &lights = scene.cache().lightBuffer();
     #if 0
     if(spheres() == nullptr) {
         spheres = cl::Buffer(m_context,
@@ -173,28 +175,57 @@ void Interface::render(Scene &scene, void *pxdata) {
     }
     #endif
     int sphereCount = 0;
+    int lightCount = 0;
     {
-        std::vector<float> data;
+        std::vector<float> lightData, sphereData;
         for(auto object : scene.sceneObjects()) {
             auto sphere = dynamic_cast<Sphere *>(object);
-            if(!sphere) continue;
-
-            data.push_back(sphere->origin().x());
-            data.push_back(sphere->origin().y());
-            data.push_back(sphere->origin().z());
-            data.push_back(sphere->radius());
-            sphereCount ++;
+            if(sphere) {
+                sphereData.push_back(sphere->origin().x());
+                sphereData.push_back(sphere->origin().y());
+                sphereData.push_back(sphere->origin().z());
+                sphereData.push_back(sphere->radius());
+                sphereData.push_back(sphere->colour().x());
+                sphereData.push_back(sphere->colour().y());
+                sphereData.push_back(sphere->colour().z());
+                sphereData.push_back(sphere->reflectivity());
+                sphereCount ++;
+            }
+            auto light = dynamic_cast<Light *>(object);
+            if(light) {
+                lightData.push_back(light->pos().x());
+                lightData.push_back(light->pos().y());
+                lightData.push_back(light->pos().z());
+                lightData.push_back(light->ambColour().x());
+                lightData.push_back(light->ambColour().y());
+                lightData.push_back(light->ambColour().z());
+                lightData.push_back(light->diffColour().x());
+                lightData.push_back(light->diffColour().y());
+                lightData.push_back(light->diffColour().z());
+                lightData.push_back(light->specColour().x());
+                lightData.push_back(light->specColour().y());
+                lightData.push_back(light->specColour().z());
+                lightCount ++;
+            }
         }
         spheres = cl::Buffer(m_context,
             CL_MEM_READ_ONLY | CL_MEM_HOST_WRITE_ONLY,
-            sizeof(float) * data.size());
+            sizeof(float) * sphereData.size());
         m_queue.enqueueWriteBuffer(spheres, false, 0,
-            sizeof(float) * data.size(), &data[0], nullptr, &sphereCopy);
+            sizeof(float) * sphereData.size(), &sphereData[0], nullptr,
+            &sphereCopy);
+        lights = cl::Buffer(m_context,
+            CL_MEM_READ_ONLY | CL_MEM_HOST_WRITE_ONLY,
+            sizeof(float) * lightData.size());
+        m_queue.enqueueWriteBuffer(lights, false, 0,
+            sizeof(float) * lightData.size(), &lightData[0], nullptr,
+            &lightCopy);
     }
 
     pixelCopy.wait();
     cameraCopy.wait();
     sphereCopy.wait();
+    lightCopy.wait();
 
     err = m_tracerKernel.setArg(0, out);
     if(err != CL_SUCCESS) Message3(Tracer, Fatal, "Failed to set argument?");
@@ -205,6 +236,10 @@ void Interface::render(Scene &scene, void *pxdata) {
     err = m_tracerKernel.setArg(3, spheres);
     if(err != CL_SUCCESS) Message3(Tracer, Fatal, "Failed to set argument?");
     err = m_tracerKernel.setArg(4, sphereCount);
+    if(err != CL_SUCCESS) Message3(Tracer, Fatal, "Failed to set argument?");
+    err = m_tracerKernel.setArg(5, lights);
+    if(err != CL_SUCCESS) Message3(Tracer, Fatal, "Failed to set argument?");
+    err = m_tracerKernel.setArg(6, lightCount);
     if(err != CL_SUCCESS) Message3(Tracer, Fatal, "Failed to set argument?");
 
     cl::Event event;
