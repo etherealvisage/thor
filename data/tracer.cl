@@ -1,9 +1,9 @@
 #define SPHERE_STRIDE 8
 #define LIGHT_STRIDE 12
 typedef struct globalData {
-    __read_only __global float *spheres;
+    float spheres[4096];
     int sphereCount;
-    __read_only __global float *lights;
+    float lights[96];
     int lightCount;
 } globalData;
 
@@ -24,7 +24,7 @@ float3 quat_rot(float4 q, float3 v) {
     return quat_mul(quat_mul(q, t), quat_conj(q)).xyz;
 }
 
-float checkIntersection(float3 rayPos, float3 rayDir, __global float *sphere) {
+float checkIntersection(float3 rayPos, float3 rayDir, __private float *sphere) {
     float3 spherePos = (float3)(sphere[0], sphere[1], sphere[2]);
 
     float3 modPos = rayPos - spherePos;
@@ -44,7 +44,7 @@ float checkIntersection(float3 rayPos, float3 rayDir, __global float *sphere) {
     return v;
 }
 
-float3 calculateNormal(__global float *sphere, float3 rayPos) {
+float3 calculateNormal(__private float *sphere, float3 rayPos) {
     float3 x = (float3)(sphere[0], sphere[1], sphere[2]);
 
     x = rayPos - x;
@@ -54,7 +54,7 @@ float3 calculateNormal(__global float *sphere, float3 rayPos) {
 }
 
 float findClosestIntersection(float3 rayPos, float3 rayDir,
-    __global float *spheres, int sphereCount, int *sphereIndex) {
+    __private float *spheres, int sphereCount, int *sphereIndex) {
 
     float closest = 1e9;
     int bestID = -1;
@@ -70,7 +70,7 @@ float findClosestIntersection(float3 rayPos, float3 rayDir,
     return closest == 1e9 ? -1.0 : closest;
 }
 
-void calculateShading(__local globalData *gd, float3 from, float3 rayDir,
+void calculateShading(__private globalData *gd, float3 from, float3 rayDir,
     float3 normal, int sphereID, float4 *colour, float *colourWeight) {
 
     float ref = gd->spheres[sphereID*SPHERE_STRIDE + 7];
@@ -123,10 +123,14 @@ void __kernel tracer(__write_only image2d_t image, __global int *counter,
     __read_only __global float *spheres, int sphereCount,
     __read_only __global float *lights, int lightCount) {
 
-    __local globalData gd;
-    gd.spheres = spheres;
+    __private globalData gd;
+    for(int i = 0; i < sphereCount * SPHERE_STRIDE; i ++) {
+        gd.spheres[i] = spheres[i];
+    }
     gd.sphereCount = sphereCount;
-    gd.lights = lights;
+    for(int i = 0; i < lightCount * LIGHT_STRIDE; i ++) {
+        gd.lights[i] = lights[i];
+    }
     gd.lightCount = lightCount;
 
     int width = get_image_width(image);
@@ -176,7 +180,7 @@ void __kernel tracer(__write_only image2d_t image, __global int *counter,
             colourWeight = 1.0;
             colour = (float4)(0,0,0,0);
 
-            depth = 8;
+            depth = 4;
         }
         else if(depth == 0) {
             // done for now
@@ -184,16 +188,15 @@ void __kernel tracer(__write_only image2d_t image, __global int *counter,
             write_imagef(image, (int2)(pixelX, pixelY), colour);
         }
         else {
-
             int sphereID;
-            float isect = findClosestIntersection(rayPos, rayDir, spheres,
+            float isect = findClosestIntersection(rayPos, rayDir, gd.spheres,
                 sphereCount, &sphereID);
 
             if(sphereID != -1) {
 
                 rayPos = rayPos + rayDir * isect;
                 float3 normal = calculateNormal(
-                    spheres + (sphereID)*SPHERE_STRIDE, rayPos);
+                    gd.spheres + (sphereID)*SPHERE_STRIDE, rayPos);
                 calculateShading(&gd, rayPos, rayDir, normal, sphereID,
                     &colour, &colourWeight);
 

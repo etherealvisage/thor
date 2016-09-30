@@ -251,7 +251,7 @@ void Interface::render(Scene &scene, void *pxdata) {
 
     cl::size_t<3> origin, size;
     origin[0] = 0, origin[1] = 0, origin[2] = 0;
-    size[0] = 800, size[1] = 600, size[2] = 1;
+    size[0] = 1920, size[1] = 1080, size[2] = 1;
     err = m_queue.enqueueReadImage(out, true, origin, size, 0, 0, pxdata, nullptr, &event);
     if(err != CL_SUCCESS) Message3(Tracer, Fatal, "Failed to read image? " << err);
 
